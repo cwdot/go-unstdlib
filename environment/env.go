@@ -1,31 +1,76 @@
 package environment
 
 import (
-	"github.com/cwdot/stdlib-go/wood"
+	"os"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 )
 
-func Read(credentialsPath string) (map[string]string, error) {
-	env, err := godotenv.Read(credentialsPath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot find %s", credentialsPath)
-	}
-	return env, nil
+type ReadOpts struct {
+	Paths                  []string
+	IgnoreMissing          bool
+	IncludeAllEnvironment  bool
+	IncludeEnvironmentKeys []string
+	FirstKeyWins           bool
 }
 
-func LoadAndValidateEnv(credentialsPath string, keys []string) (map[string]string, error) {
-	env, err := Load(credentialsPath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "env loading")
+func WithPaths(paths []string) func(*ReadOpts) {
+	return func(o *ReadOpts) {
+		o.Paths = paths
+	}
+}
+
+func WithIgnoreMissing() func(*ReadOpts) {
+	return func(o *ReadOpts) {
+		o.IgnoreMissing = true
+	}
+}
+
+func WithIncludeAllEnvironment() func(*ReadOpts) {
+	return func(o *ReadOpts) {
+		o.IgnoreMissing = true
+	}
+}
+
+func WithIncludeEnvironmentKeys(keys []string) func(*ReadOpts) {
+	return func(o *ReadOpts) {
+		o.IncludeEnvironmentKeys = keys
+	}
+}
+
+func Read(opts ...func(*ReadOpts)) (map[string]string, error) {
+	options := &ReadOpts{}
+	for _, o := range opts {
+		o(options)
 	}
 
-	if err := Validate(env, keys); err != nil {
-		wood.Infof("Credentials path: %v", credentialsPath)
-		return nil, errors.Wrapf(err, "env validation")
+	env := make(envMap)
+
+	if options.IncludeAllEnvironment {
+		for _, key := range os.Environ() {
+			env.SetEnviron(key, options.FirstKeyWins)
+		}
+	}
+	if options.IncludeEnvironmentKeys != nil {
+		for _, key := range options.IncludeEnvironmentKeys {
+			env.SetEnviron(key, options.FirstKeyWins)
+		}
 	}
 
+	for _, p := range options.Paths {
+		penv, err := Load(p)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) && options.IgnoreMissing {
+				continue
+			}
+			return nil, err
+		}
+		for k, v := range penv {
+			env.Set(k, v, options.FirstKeyWins)
+		}
+	}
 	return env, nil
 }
 
@@ -45,4 +90,16 @@ func Validate(env map[string]string, keys []string) error {
 		}
 	}
 	return errs.ErrorOrNil()
+}
+
+type envMap map[string]string
+
+func (e envMap) Set(key, value string, firstWins bool) {
+	if _, ok := e[key]; !ok || firstWins {
+		e[key] = value
+	}
+}
+
+func (e envMap) SetEnviron(key string, firstWins bool) {
+	e.Set(key, os.Getenv(key), firstWins)
 }
