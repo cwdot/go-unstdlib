@@ -2,6 +2,7 @@ package environment
 
 import (
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/joho/godotenv"
@@ -30,7 +31,7 @@ func WithIgnoreMissing() func(*ReadOpts) {
 
 func WithIncludeAllEnvironment() func(*ReadOpts) {
 	return func(o *ReadOpts) {
-		o.IgnoreMissing = true
+		o.IncludeAllEnvironment = true
 	}
 }
 
@@ -49,13 +50,17 @@ func Read(opts ...func(*ReadOpts)) (map[string]string, error) {
 	env := make(envMap)
 
 	if options.IncludeAllEnvironment {
-		for _, key := range os.Environ() {
-			env.SetEnviron(key, options.FirstKeyWins)
+		for _, line := range os.Environ() {
+			tokens := strings.Split(line, "=")
+			key := tokens[0]
+			value := tokens[1]
+			env.Set(key, value, options.FirstKeyWins)
 		}
 	}
 	if options.IncludeEnvironmentKeys != nil {
 		for _, key := range options.IncludeEnvironmentKeys {
-			env.SetEnviron(key, options.FirstKeyWins)
+			value := os.Getenv(key)
+			env.Set(key, value, options.FirstKeyWins)
 		}
 	}
 
@@ -65,7 +70,7 @@ func Read(opts ...func(*ReadOpts)) (map[string]string, error) {
 			if errors.Is(err, os.ErrNotExist) && options.IgnoreMissing {
 				continue
 			}
-			return nil, err
+			return nil, errors.Wrapf(err, "cannot load %s", p)
 		}
 		for k, v := range penv {
 			env.Set(k, v, options.FirstKeyWins)
