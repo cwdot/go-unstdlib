@@ -41,7 +41,7 @@ func WithIncludeEnvironmentKeys(keys []string) func(*ReadOpts) {
 	}
 }
 
-func Read(opts ...func(*ReadOpts)) (map[string]string, error) {
+func Read(opts ...func(*ReadOpts)) (map[string]Value, error) {
 	options := &ReadOpts{}
 	for _, o := range opts {
 		o(options)
@@ -65,7 +65,7 @@ func Read(opts ...func(*ReadOpts)) (map[string]string, error) {
 	}
 
 	for _, p := range options.Paths {
-		penv, err := Load(p)
+		penv, err := load(p)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) && options.IgnoreMissing {
 				continue
@@ -79,7 +79,7 @@ func Read(opts ...func(*ReadOpts)) (map[string]string, error) {
 	return env, nil
 }
 
-func Load(credentialsPath string) (map[string]string, error) {
+func load(credentialsPath string) (map[string]string, error) {
 	env, err := godotenv.Read(credentialsPath)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot find %s", credentialsPath)
@@ -87,7 +87,7 @@ func Load(credentialsPath string) (map[string]string, error) {
 	return env, nil
 }
 
-func Validate(env map[string]string, keys []string) error {
+func Validate(env map[string]Value, keys []string) error {
 	var errs *multierror.Error
 	for _, key := range keys {
 		if _, ok := env[key]; !ok {
@@ -95,16 +95,4 @@ func Validate(env map[string]string, keys []string) error {
 		}
 	}
 	return errs.ErrorOrNil()
-}
-
-type envMap map[string]string
-
-func (e envMap) Set(key, value string, firstWins bool) {
-	if _, ok := e[key]; !ok || firstWins {
-		e[key] = value
-	}
-}
-
-func (e envMap) SetEnviron(key string, firstWins bool) {
-	e.Set(key, os.Getenv(key), firstWins)
 }
