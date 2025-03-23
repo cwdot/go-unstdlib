@@ -1,8 +1,8 @@
 module github.com/cwdot/go-unstdlib
 
-go 1.23
+go 1.24
 
-toolchain go1.23.1
+toolchain go1.24.1
 
 require (
 	github.com/cwdot/stdlib-go v0.2.17
