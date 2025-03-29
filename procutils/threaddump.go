@@ -1,12 +1,14 @@
 package procutils
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime/pprof"
 	"syscall"
 
 	"github.com/cwdot/go-bark/logging"
+	"github.com/cwdot/go-stdlib/colors"
 )
 
 // ThreadDumpSignaler sets up a signal handler to dump goroutines to a file
@@ -18,6 +20,7 @@ func ThreadDumpSignaler(outputPath string) {
 	go func() {
 		for {
 			<-sigCh
+
 			f, err := os.Create(outputPath)
 			if err != nil {
 				logging.Error("Error creating thread dump file", "output_path", outputPath, "error", err)
@@ -29,8 +32,10 @@ func ThreadDumpSignaler(outputPath string) {
 				logging.Error("Error writing thread dump", "output_path", outputPath, "error", err)
 				break
 			}
-			logging.Debug("Dumped goroutines to %s", "output_path", outputPath)
+			logging.Info("Dumped goroutines to %s", "output_path", outputPath)
 		}
 	}()
 
+	command := fmt.Sprintf("kill -SIGUSR1 %d", os.Getpid())
+	logging.Infof("Dump signal handler: %s", colors.Green.Wrap(command))
 }
