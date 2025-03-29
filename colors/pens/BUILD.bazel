@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "pens",
+    srcs = [
+        "lut_marker.go",
+        "pen.go",
+        "rainbow_marker.go",
+    ],
+    importpath = "github.com/cwdot/go-bark/pens",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "pens_test",
+    srcs = [
+        "lut_marker_test.go",
+        "pen_test.go",
+        "rainbow_marker_test.go",
+    ],
+    embed = [":pens"],
+    deps = ["@com_github_stretchr_testify//assert"],
+)
