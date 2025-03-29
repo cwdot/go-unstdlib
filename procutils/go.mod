@@ -1,4 +1,4 @@
-module github.com/cwdot/go-unstdlib/procutils
+module github.com/cwdot/go-stdlib/procutils
 
 go 1.24
 

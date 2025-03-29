@@ -1,4 +1,4 @@
-module github.com/cwdot/go-unstdlib
+module github.com/cwdot/go-stdlib/environment
 
 go 1.24
 
